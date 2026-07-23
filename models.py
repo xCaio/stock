@@ -1,9 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
-from sqlalchemy.orm import declarative_base
-from datetime import timezone, timedelta
+from datetime import timezone
 
-db = create_engine("sqlite:///banco.db")
-Base = declarative_base()
+from database import Base
 
 class User(Base):
     __tablename__ = "users"
