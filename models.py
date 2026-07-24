@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
-from datetime import timezone
+from datetime import timezone, datetime
 
 from database import Base
 
@@ -25,8 +25,8 @@ class Product(Base):
     product_type = Column("product_type", String, nullable=False)
     stock = Column("stock", Integer, default=0)
     stock_minimum = Column("stock_minimum", Integer, default=0)
-    created_at =Column("created_at", DateTime, default=timezone.utc)
-    updated_at = Column("updated_at", DateTime, default=timezone.utc, onupdate=timezone.utc)
+    created_at =Column("created_at", DateTime, default=datetime.now(timezone.utc))
+    updated_at = Column("updated_at", DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     active = Column("active", Boolean, default=True)
 
     def __init__(self, code, product_type, stock, stock_minimum):

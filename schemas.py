@@ -15,3 +15,21 @@ class LoginSchema(BaseModel):
 
     class Config():
         from_attributes = True
+
+class SuppliesSchema(BaseModel):
+    code: str
+    product_type: str
+    stock: int
+    stock_minimum: int
+
+    class Config():
+        from_attributes = True
+
+class ProductResponseSchema(BaseModel):
+    id: int
+    code: str
+    product_type: str
+    stock: int
+
+    class Config():
+        from_attributes = True
