@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from dependencies import get_session
+from dependencies import get_session, verify_token
 from models import User
 from security import bcrypt_context, TOKEN_ACESS_EXPIRES_MINUTES, SECRET_KEY, ALGORITHM
 from schemas import CreateAccountSchema, LoginSchema
 from datetime import timezone, timedelta, datetime
-from jose import jwt, JWTError
+from jose import jwt
 
 auth_router = APIRouter(prefix='/auth', tags=['auth'])
 
@@ -24,14 +25,11 @@ def create_access_token(id_user, duration= timedelta(minutes=TOKEN_ACESS_EXPIRES
     encode = jwt.encode(dict_info, SECRET_KEY, ALGORITHM)
     return encode
     
-
-
 @auth_router.get('/')
 async def home():
     return{
         "message": "Rota de autenticação"
     }
-
 
 @auth_router.post('/create-account')
 async def create_account(create_account: CreateAccountSchema, session: Session = Depends(get_session)):
@@ -51,11 +49,31 @@ async def login(login_schema: LoginSchema, session: Session = Depends(get_sessio
     user = authenticate_user(login_schema.email, login_schema.password, session)
     if not user:
         raise HTTPException(status_code=404, detail='Credenciais incorretas')
-
     access_token = create_access_token(user.id)
-    
+    refresh_token = create_access_token(user.id, duration=timedelta(days=7))
     return{
-        "message": f"usuario logado com sucesso {login_schema.email}",
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type":"Bearer"
+    }
+
+@auth_router.post('/login-form')
+async def login(login_form: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    user = authenticate_user(login_form.username, login_form.password, session)
+    if not user:
+        raise HTTPException(status_code=404, detail='Credenciais incorretas')
+    access_token = create_access_token(user.id)
+    return{
         "access_token": access_token,
         "token_type":"Bearer"
     }
+
+@auth_router.get('/refresh')
+async def refresh_token(user: User = Depends(verify_token)):
+    access_token = create_access_token(user.id)
+
+    return {
+        "access_token" : access_token,
+        "token_type": "Bearer"
+    }
+
