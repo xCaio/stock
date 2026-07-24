@@ -31,8 +31,8 @@ async def home():
         "message": "Rota de autenticação"
     }
 
-@auth_router.post('/create-account')
-async def create_account(create_account: CreateAccountSchema, session: Session = Depends(get_session)):
+@auth_router.post('/register')
+async def register(create_account: CreateAccountSchema, session: Session = Depends(get_session)):
     user = session.query(User).filter(User.email == create_account.email).first()
     if user:
         raise HTTPException(status_code=400, detail='Email Ja existe')
