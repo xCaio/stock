@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from dependencies import get_session
 from models import User
-from security import bcrypt_context
+from security import bcrypt_context, TOKEN_ACESS_EXPIRES_MINUTES, SECRET_KEY, ALGORITHM
 from schemas import CreateAccountSchema, LoginSchema
+from datetime import timezone, timedelta, datetime
+from jose import jwt, JWTError
 
 auth_router = APIRouter(prefix='/auth', tags=['auth'])
 
@@ -15,6 +17,13 @@ def authenticate_user(email,password,session):
         return False
     else:
         return user
+
+def create_access_token(id_user, duration= timedelta(minutes=TOKEN_ACESS_EXPIRES_MINUTES)):
+    expiration_date = datetime.now(timezone.utc) + duration
+    dict_info = {"sub": str(id_user), "exp": expiration_date}
+    encode = jwt.encode(dict_info, SECRET_KEY, ALGORITHM)
+    return encode
+    
 
 
 @auth_router.get('/')
@@ -42,7 +51,11 @@ async def login(login_schema: LoginSchema, session: Session = Depends(get_sessio
     user = authenticate_user(login_schema.email, login_schema.password, session)
     if not user:
         raise HTTPException(status_code=404, detail='Credenciais incorretas')
+
+    access_token = create_access_token(user.id)
+    
     return{
         "message": f"usuario logado com sucesso {login_schema.email}",
+        "access_token": access_token,
         "token_type":"Bearer"
     }
