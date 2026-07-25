@@ -89,3 +89,27 @@ async def get_products(
     if search:
         query = query.filter(Product.code.ilike(f"%{search.strip()}%"))
     return query.all()
+
+@supplies_router.patch('/products/{code}/inactive')
+async def inactive_product(code:str, session:Session = Depends(get_session)):
+    product = session.query(Product).filter(Product.code == code).first()
+    if not product:
+        raise HTTPException(status_code=404, detail='Produto nao encontrado')
+    product.active=False
+    session.commit()
+    session.refresh(product)
+    return{
+        "message": f"Produto {product.code} Desativado"
+    }
+
+@supplies_router.patch('/products/{code}/active')
+async def active_product(code:str, session:Session = Depends(get_session)):
+    product = session.query(Product).filter(Product.code == code).first()
+    if not product:
+        raise HTTPException(status_code=404, detail='Produto nao encontrado')
+    product.active=True
+    session.commit()
+    session.refresh(product)
+    return{
+        "message": f"Produto {product.code} Ativado"
+    }

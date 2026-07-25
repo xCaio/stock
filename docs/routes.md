@@ -1,11 +1,11 @@
-## Modulo de autenticação
+## Modulo de autenticação (feito)
 GET /auth/          -- rota padrão
 POST /auth/login    -- login de usuario
 POST /auth/register -- registro de usuario
 GET  /auth/refresh  -- refresh token
 
 
-## Módulo de insumos
+## Módulo de insumos (feito)
 
 GET /products       -- listar todos
 
@@ -26,26 +26,26 @@ GET /products?type=etiqueta
 GET /products?active=true
 GET /products?search=PA123
 
-## Buscar um produto
+## Buscar um produto (feito)
 
 GET /products/{id}  -- busca um insumo a partir do ID
 
 
-## Criar produto (Admin)
+## Criar produto (Admin) (feito)
 
 POST /products
 
-## Editar produto
+## Editar produto (feito)
 
 PUT /products/{id}
 
-## Inativar produto (ao invés de excluir)
+## Inativar produto (ao invés de excluir) (feito)
 
 PATCH /products/{id}/inactive
 Só altera:
 active = False
 
-# Reativar
+# Reativar (feito)
 PATCH /products/{id}/active
 Só altera:
 active = True
