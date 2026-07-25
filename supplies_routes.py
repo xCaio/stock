@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from dependencies import verify_token, get_session
 from sqlalchemy.orm import Session
 from models import Product, User
-from schemas import SuppliesSchema, ProductResponseSchema
+from schemas import SuppliesSchema, ProductResponseSchema, ProductUpdateSchema
 from typing import List
 
 
@@ -14,17 +14,6 @@ async def home():
         "message": "Rota inicial dos insumos"
     }
 
-@supplies_router.get('/products', response_model=List[ProductResponseSchema])
-async def show_products(session: Session = Depends(get_session)):
-
-    """
-        GET /products    -- listar todos
-    """
-
-    products = session.query(Product).all()
-    return products
-
-
 @supplies_router.post('/products')
 async def create_product(supplies_schema: SuppliesSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
 
@@ -32,7 +21,6 @@ async def create_product(supplies_schema: SuppliesSchema, session: Session = Dep
         ## Criar produto (Admin)
         POST /products
     """
-
     product = session.query(Product).filter(Product.code == supplies_schema.code).first()
     if product:
         raise HTTPException(status_code=400, detail='O codigo do produto já existe')
@@ -60,10 +48,44 @@ async def search_product(code: str, session: Session = Depends(get_session)):
     }
 
 @supplies_router.put('/products/{code}')
-async def edit_product(code: str, session: Session = Depends(get_session)):
+async def edit_product(code: str, product_update: ProductUpdateSchema ,session: Session = Depends(get_session)):
     """
         ## Editar um produto
         PUT /products/{id}
     """
     product = session.query(Product).filter(Product.code == code).first()
-    ## ainda vou continuar, calma ae q vou almoçar
+    if not product:
+        raise HTTPException(status_code=404, detail='Produto nao encontrado')
+    
+    code_exists = session.query(Product).filter(Product.code == product_update.code).first()
+    if code_exists:
+        raise HTTPException(status_code=400, detail='O codigo já está cadastrado')
+    
+    product.code = product_update.code
+    product.product_type = product_update.product_type
+    product.stock = product_update.stock
+    session.commit()
+    session.refresh(product)
+
+    return {
+        "message": "Produto atualizado com sucesso",
+        "code": product.code, 
+        "product_type": product.product_type, 
+        "stock": product.stock, 
+    }
+
+@supplies_router.get('/products')
+async def get_products(
+    type: str | None = None, 
+    active: bool | None = None, 
+    search: str | None = None, 
+    session: Session = Depends(get_session)
+):
+    query = session.query(Product)
+    if type:
+        query = query.filter(Product.product_type == type)
+    if active is not None:
+        query = query.filter(Product.active == active)
+    if search:
+        query = query.filter(Product.code.ilike(f"%{search.strip()}%"))
+    return query.all()

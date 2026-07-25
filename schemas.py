@@ -33,3 +33,8 @@ class ProductResponseSchema(BaseModel):
 
     class Config():
         from_attributes = True
+
+class ProductUpdateSchema(BaseModel):
+    code: str
+    product_type: str
+    stock: int
