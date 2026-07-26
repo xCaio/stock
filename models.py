@@ -1,4 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import timezone, datetime
 
 from database import Base
@@ -34,3 +35,15 @@ class Product(Base):
         self.product_type = product_type
         self.stock = stock
         self.stock_minimum = stock_minimum
+
+class StockMovement(Base):
+    __tablename__ = "stock_movements"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=True, index=True)
+    product_id = Column("product_id", Integer, ForeignKey("products.id"), nullable=False)
+    user_id = Column("user_id", Integer, ForeignKey("users.id"), nullable=False)
+    movement_type = Column(String, nullable=False)
+    observation = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    product = relationship("Product")
+    user = relationship("User")
