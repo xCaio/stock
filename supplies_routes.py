@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependencies import verify_token, get_session
 from sqlalchemy.orm import Session
-from models import Product, User
-from schemas import SuppliesSchema, ProductResponseSchema, ProductUpdateSchema
+from models import Product, User, StockMovement
+from schemas import SuppliesSchema, ProductResponseSchema, ProductUpdateSchema, StockMovementSchema
 from typing import List
 
 
@@ -112,4 +112,55 @@ async def active_product(code:str, session:Session = Depends(get_session)):
     session.refresh(product)
     return{
         "message": f"Produto {product.code} Ativado"
+    }
+
+@supplies_router.post('/products/{code}/entry')
+async def entry_product(code: str, movement_schema: StockMovementSchema,session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    product = session.query(Product).filter(Product.code == code).first()
+    if not product:
+        raise HTTPException(status_code=404, detail='Produto nao encontrado')
+    stock_before = product.stock
+    product.stock += movement_schema.quantity
+    movement = StockMovement(
+        product_id = product.id,
+        user_id = user.id,
+        movement_type = "ENTRADA",
+        quantity = movement_schema.quantity,
+        stock_before = stock_before,
+        stock_after = product.stock,
+        observation = movement_schema.observation
+    )
+
+    session.add(movement)
+    session.commit()
+    session.refresh(product)
+    return {
+        "message": "Entrada registrada com sucesso",
+        "stock": product.stock
+    }
+
+@supplies_router.post('/products/{code}/exit')
+async def exit_product(code: str, movement_schema: StockMovementSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    product = session.query(Product).filter(Product.code == code).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Produto nao encontrado")
+    if product.stock < movement_schema.quantity:
+        raise HTTPException(status_code=404, detail="Estoque insuficiente")
+    stock_before = product.stock
+    product.stock -= movement_schema.quantity
+    movement = StockMovement(
+        product_id = product.id,
+        user_id = user.id,
+        movement_type = "SAIDA",
+        quantity = movement_schema.quantity,
+        stock_before = stock_before,
+        stock_after = product.stock,
+        observation = movement_schema.observation
+    )
+    session.add(movement)
+    session.commit()
+    session.refresh(product)
+    return {
+        "message": "Saida registrada com sucesso",
+        "stock": product.stock
     }

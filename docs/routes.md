@@ -51,7 +51,7 @@ Só altera:
 active = True
 
 
-## Movimentações - Essa é a parte principal do sistema.
+## Movimentações - Essa é a parte principal do sistema. (feito)
 - Entrada
 
 POST /products/{id}/entry

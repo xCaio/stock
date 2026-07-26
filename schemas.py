@@ -38,3 +38,10 @@ class ProductUpdateSchema(BaseModel):
     code: str
     product_type: str
     stock: int
+
+    class Config():
+        from_attributes=True
+
+class StockMovementSchema(BaseModel):
+    quantity: int
+    observation: str | None = None
