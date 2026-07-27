@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator
 from typing import Optional, List
+from enums import MovementType
 
 class CreateAccountSchema(BaseModel):
     name: str
@@ -45,6 +46,10 @@ class ProductUpdateSchema(BaseModel):
     code: str
     product_type: str
 
+    @field_validator("code")
+    def normalize_code(cls, value):
+        return value.upper()
+
     class Config():
         from_attributes=True
 
@@ -54,11 +59,11 @@ class StockMovementSchema(BaseModel):
 
 class MovementSchema(BaseModel):
     product_id: int
-    movement_type: str
+    movement_type: MovementType
     quantity: int
     observation: str | None = None
 
-    @field_validator("movement_type")
+    @field_validator("movement_type", mode="before")
     def normalize_moviment_type(cls, value):
         return value.lower()
 

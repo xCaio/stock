@@ -53,17 +53,21 @@ async def edit_product(code: str, product_update: ProductUpdateSchema ,session: 
         ## Editar um produto
         PUT /products/{id}
     """
-    product = session.query(Product).filter(Product.code == code).first()
+    product = session.query(Product).filter(Product.code == code.upper()).first()
     if not product:
         raise HTTPException(status_code=404, detail='Produto nao encontrado')
     
-    code_exists = session.query(Product).filter(Product.code == product_update.code).first()
+    code_exists = (
+    session.query(Product)
+    .filter(Product.code == product_update.code)
+    .filter(Product.id != product.id)
+    .first()
+)
     if code_exists:
         raise HTTPException(status_code=400, detail='O codigo já está cadastrado')
     
     product.code = product_update.code
     product.product_type = product_update.product_type
-    product.stock = product_update.stock
     session.commit()
     session.refresh(product)
 
@@ -71,7 +75,6 @@ async def edit_product(code: str, product_update: ProductUpdateSchema ,session: 
         "message": "Produto atualizado com sucesso",
         "code": product.code, 
         "product_type": product.product_type, 
-        "stock": product.stock, 
     }
 
 @supplies_router.get('/products')
@@ -124,7 +127,7 @@ async def entry_product(code: str, movement_schema: StockMovementSchema,session:
     movement = StockMovement(
         product_id = product.id,
         user_id = user.id,
-        movement_type = "ENTRADA",
+        movement_type = "entrada",
         quantity = movement_schema.quantity,
         stock_before = stock_before,
         stock_after = product.stock,
@@ -151,7 +154,7 @@ async def exit_product(code: str, movement_schema: StockMovementSchema, session:
     movement = StockMovement(
         product_id = product.id,
         user_id = user.id,
-        movement_type = "SAIDA",
+        movement_type = "saida",
         quantity = movement_schema.quantity,
         stock_before = stock_before,
         stock_after = product.stock,
