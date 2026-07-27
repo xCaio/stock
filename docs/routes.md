@@ -86,7 +86,7 @@ Listar tudo
 
 GET /movements
 
-GET /movements?product=1
+GET /movements?products=1
 
 GET /movements?user=5
 
