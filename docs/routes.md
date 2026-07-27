@@ -80,7 +80,7 @@ POST /products/{id}/exit
 + cria movimentação
 
 
-# Histórico
+# Histórico (feito)
 
 Listar tudo
 
