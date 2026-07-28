@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, EmailStr
 from typing import Optional, List
 from enums import MovementType
 
@@ -66,6 +66,15 @@ class MovementSchema(BaseModel):
     @field_validator("movement_type", mode="before")
     def normalize_moviment_type(cls, value):
         return value.lower()
+
+    class Config():
+        from_attributes=True
+
+class UserUpdateSchema(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
 
     class Config():
         from_attributes=True
