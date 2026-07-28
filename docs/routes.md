@@ -94,7 +94,7 @@ GET /movements?type=entry
 
 GET /movements?start=2026-07-01&end=2026-07-31
 
-# Dashboard
+# Dashboard (feito)
 
 GET /dashboard
 
