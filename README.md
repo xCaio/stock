@@ -1,10 +1,10 @@
-# Documentação do projeto Stock API
+# Stock API
 
 ## Visão geral
 
 A Stock API é uma aplicação backend em FastAPI para gestão de insumos e produtos com controle de estoque, histórico de movimentações, autenticação por JWT e administração de usuários.
 
-O projeto foi estruturado para funcionar como uma base sólida para sistemas de controle de estoque com regras simples de acesso e auditoria das operações.
+O projeto foi estruturado para funcionar como uma base sólida para sistemas de controle de estoque com regras simples de acesso e operações registradas para auditoria.
 
 ---
 
@@ -59,56 +59,35 @@ O projeto foi estruturado para funcionar como uma base sólida para sistemas de 
 
 ---
 
-## Arquitetura do projeto
+## Estrutura do projeto
 
-A aplicação segue uma estrutura simples em camadas, com separação por responsabilidade:
-
-1. Camada de entrada (rotas)
-   - Recebe as requisições HTTP e organiza os endpoints por domínio.
-
-2. Camada de dependências
-   - Centraliza a criação de sessões do banco e a verificação de tokens JWT.
-
-3. Camada de modelos
-   - Define as entidades User, Product e StockMovement com SQLAlchemy.
-
-4. Camada de schemas
-   - Define os dados esperados nas entradas e saídas da API.
-
-5. Camada de persistência
-   - Usa SQLAlchemy e Alembic para conexão e migração do banco.
+- [main.py](main.py) – ponto de entrada da aplicação e inclusão dos routers
+- [auth_routes.py](auth_routes.py) – rotas de autenticação e token
+- [supplies_routes.py](supplies_routes.py) – gestão de produtos, estoque e movimentações
+- [movements_routes.py](movements_routes.py) – histórico de movimentações
+- [dashboard_routes.py](dashboard_routes.py) – métricas e resumo do estoque
+- [users_routes.py](users_routes.py) – administração de usuários
+- [models.py](models.py) – modelos SQLAlchemy
+- [schemas.py](schemas.py) – validação de entrada e saída
+- [database.py](database.py) – configuração do banco
+- [dependencies.py](dependencies.py) – dependências de sessão e autenticação
+- [security.py](security.py) – configuração de segurança e hashing
+- [alembic/](alembic) – migrações do banco
+- [docs/](docs) – documentação do projeto
 
 ---
 
-## Estrutura de arquivos
+## Principais modelos
 
-- [main.py](../main.py) – ponto de entrada da aplicação e inclusão dos routers
-- [auth_routes.py](../auth_routes.py) – autenticação e token
-- [supplies_routes.py](../supplies_routes.py) – gestão de produtos, estoque e movimentações
-- [movements_routes.py](../movements_routes.py) – histórico de movimentações
-- [dashboard_routes.py](../dashboard_routes.py) – métricas e resumo do estoque
-- [users_routes.py](../users_routes.py) – administração de usuários
-- [models.py](../models.py) – modelos SQLAlchemy
-- [schemas.py](../schemas.py) – validação de entrada e saída
-- [database.py](../database.py) – configuração do banco
-- [dependencies.py](../dependencies.py) – dependências de sessão e autenticação
-- [security.py](../security.py) – configuração de segurança e hashing
-- [alembic/](../alembic) – migrações do banco
-- [docs/](.) – documentação do projeto
-
----
-
-## Modelos principais
-
-### Usuário
+### User
 Representa um usuário do sistema com:
 - id
 - name
 - email
-- password (criptografada)
+- password (armazenada de forma criptografada)
 - role
 
-### Produto
+### Product
 Representa um produto ou insumo com:
 - id
 - code
@@ -218,5 +197,4 @@ Documentação interativa:
 
 ## Observações finais
 
-Este projeto já contempla os principais blocos de uma API de estoque funcional: autenticação, gestão de produtos, entradas e saídas, histórico de movimentações, dashboard e controle administrativo. A estrutura está preparada para evolução com novas regras de negócio e funcionalidades adicionais.
-
+Este projeto já contempla os principais blocos de uma API de estoque funcional: autenticação, gestão de produtos, entradas e saídas, histórico de movimentos, dashboard e controle administrativo. A estrutura está preparada para evolução com novas regras de negócio e funcionalidades adicionais.
