@@ -21,6 +21,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL não configurada")
+
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
@@ -28,6 +34,7 @@ if config.config_file_name is not None:
 config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
 
 target_metadata = Base.metadata
+
 
 
 # other values from the config, defined by the needs of env.py,
