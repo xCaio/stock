@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from dependencies import verify_token, get_session
 from sqlalchemy.orm import Session
 from models import Product, User, StockMovement
-from schemas import SuppliesSchema, ProductResponseSchema, ProductUpdateSchema, StockMovementSchema
+from schemas import SuppliesSchema, ProductAdjustmentSchema, ProductUpdateSchema, StockMovementSchema
 from typing import List
 
 
@@ -32,6 +32,21 @@ async def create_product(supplies_schema: SuppliesSchema, session: Session = Dep
     return {
         "message": f"Produto {new_product.code} adicionado com sucesso ",
         "product": new_product
+    }
+
+@supplies_router.get('/products/low-stock')
+async def low_stock(session: Session = Depends(get_session)):
+    products = (
+        session.query(Product).filter(Product.stock <= Product.stock_minimum).all()
+    )
+    if not products:
+        return{
+            "message": "Nenhum produto com estoque baixo",
+            "products": []
+        }
+    return {
+        "total": len(products),
+        "products": products
     }
 
 @supplies_router.get('/products/{code}')
@@ -166,4 +181,71 @@ async def exit_product(code: str, movement_schema: StockMovementSchema, session:
     return {
         "message": "Saida registrada com sucesso",
         "stock": product.stock
+    }
+
+supplies_router.post('/products/{id}/adjustment')
+async def adjustment(
+    id: int,
+    product_adjustment: ProductAdjustmentSchema,
+    session: Session = Depends(get_session),
+    user: User = Depends(verify_token)
+):
+    product = session.query(Product).filter(Product.id == id).first()
+    if not product:
+        raise HTTPException(404, "Produto nao encontrado")
+    if product_adjustment.new_stock < 0:
+        raise HTTPException(400, "O estoque nao pode ser negativo")
+    if product_adjustment.new_stock == product.stock:
+        raise HTTPException(400, "O estoque informado eh igual ao estoque atual.")
+
+    difference = product_adjustment.new_stock - product.stock
+    movement = StockMovement(
+        product_id=product.id,
+        user_id=user.id,
+        type="adjustment",
+        quantity=difference,
+        reason=product_adjustment.reason
+    )
+    product.stock = product_adjustment.new_stock
+
+    session.add(movement)
+    session.commit()
+    session.refresh(product)
+
+    return {
+        "message": "Estoque ajustado com sucesso.",
+        "difference": difference,
+        "current_stock": product.stock
+    }
+
+@supplies_router.get('/products/{code}/movements')
+async def product_movements(
+    code: str,
+    session: Session = Depends(get_session)
+):
+    product = (
+        session.query(Product)
+        .filter(Product.code == code)
+        .first()
+    )
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Produto nao encontrado"
+        )
+
+    movements = (
+        session.query(StockMovement)
+        .filter(StockMovement.product_id == product.id)
+        .order_by(StockMovement.created_at.desc())
+        .all()
+    )
+
+    return {
+        "product": {
+            "code": product.code,
+            "current_stock": product.stock
+        },
+        "movements": movements
     }

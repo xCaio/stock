@@ -115,7 +115,7 @@ PATCH /users/{id}/inactive
 
 
 
-## Obrigar toda alteração de estoque a passar por uma movimentação.
+## Obrigar toda alteração de estoque a passar por uma movimentação.(feito)
 
 Entrada:
 POST /products/{id}/entry

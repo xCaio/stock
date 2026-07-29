@@ -81,3 +81,13 @@ class UserUpdateSchema(BaseModel):
 
 class UserRoleSchema(BaseModel):
     role: Literal["user", "admin"]
+
+    class Config():
+            from_attributes=True
+
+class ProductAdjustmentSchema(BaseModel):
+    new_stock: int
+    reason: str
+
+    class Config():
+            from_attributes=True
