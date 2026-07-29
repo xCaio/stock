@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Literal
 from enums import MovementType
 
 class CreateAccountSchema(BaseModel):
@@ -78,3 +78,6 @@ class UserUpdateSchema(BaseModel):
 
     class Config():
         from_attributes=True
+
+class UserRoleSchema(BaseModel):
+    role: Literal["user", "admin"]
