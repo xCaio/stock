@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependencies import verify_token, get_session
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from models import Product, User, StockMovement
-from schemas import SuppliesSchema, ProductAdjustmentSchema, ProductUpdateSchema, StockMovementSchema
+from schemas import SuppliesSchema, ProductAdjustmentSchema, ProductUpdateSchema, StockMovementSchema, StockMovementResponse
 from typing import List
 
 
@@ -238,6 +238,7 @@ async def product_movements(
 
     movements = (
         session.query(StockMovement)
+        .options(joinedload(StockMovement.user))
         .filter(StockMovement.product_id == product.id)
         .order_by(StockMovement.created_at.desc())
         .all()
@@ -248,5 +249,5 @@ async def product_movements(
             "code": product.code,
             "current_stock": product.stock
         },
-        "movements": movements
+        "movements": [StockMovementResponse.from_movement(m) for m in movements]
     }

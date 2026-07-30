@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from models import StockMovement, User, Product
 from dependencies import verify_token, get_session
+from schemas import StockMovementResponse
 from datetime import date, datetime, time
 
 movements_router = APIRouter(prefix='/movements', tags=['movements'], dependencies=[Depends(verify_token)])
 
-@movements_router.get('/')
+@movements_router.get('/', response_model=list[StockMovementResponse])
 async def list_all(
     product_code: str | None = None,
     user_id: int | None = None,
@@ -31,7 +32,11 @@ async def list_all(
         end_datetime = datetime.combine(end, time.max)
         query = query.filter(StockMovement.created_at <= end_datetime)
 
-    movements = query.all()
-    return movements
+    movements = (
+        query.options(joinedload(StockMovement.user))
+        .order_by(StockMovement.created_at.desc())
+        .all()
+    )
+    return [StockMovementResponse.from_movement(m) for m in movements]
         
     
