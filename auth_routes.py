@@ -77,3 +77,11 @@ async def refresh_token(user: User = Depends(verify_token)):
         "token_type": "Bearer"
     }
 
+@auth_router.get('/me')
+async def me(user: User = Depends(verify_token)):
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "role": user.role,
+    }
