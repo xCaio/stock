@@ -18,14 +18,14 @@ def normalize_product_type_value(value: str) -> str:
 
 class CreateAccountSchema(BaseModel):
     name: str
-    email: str
+    email: EmailStr
     password: str
 
     class Config():
         from_attributes=True
 
 class LoginSchema(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
     class Config():
