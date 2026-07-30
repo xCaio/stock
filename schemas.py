@@ -1,6 +1,18 @@
 from pydantic import BaseModel, field_validator, EmailStr
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 from enums import MovementType
+
+ALLOWED_PRODUCT_TYPES = ("etiqueta", "ribbon")
+
+
+def normalize_product_type_value(value: str) -> str:
+    normalized = str(value).strip().lower()
+    if normalized in ("etiqueta", "etiquetas"):
+        return "etiqueta"
+    if normalized in ("ribbon", "ribbons"):
+        return "ribbon"
+    raise ValueError('product_type deve ser "etiqueta" ou "ribbon"')
+
 
 class CreateAccountSchema(BaseModel):
     name: str
@@ -19,14 +31,17 @@ class LoginSchema(BaseModel):
 
 class SuppliesSchema(BaseModel):
     code: str
-    product_type: str
+    product_type: Literal["etiqueta", "ribbon"]
     stock: int
     stock_minimum: int
 
-    @field_validator("product_type")
+    @field_validator("product_type", mode="before")
+    @classmethod
     def normalize_product_type(cls, value):
-        return value.lower()
+        return normalize_product_type_value(value)
+
     @field_validator("code")
+    @classmethod
     def normalize_code(cls, value):
         return value.upper()
 
@@ -44,9 +59,15 @@ class ProductResponseSchema(BaseModel):
 
 class ProductUpdateSchema(BaseModel):
     code: str
-    product_type: str
+    product_type: Literal["etiqueta", "ribbon"]
+
+    @field_validator("product_type", mode="before")
+    @classmethod
+    def normalize_product_type(cls, value):
+        return normalize_product_type_value(value)
 
     @field_validator("code")
+    @classmethod
     def normalize_code(cls, value):
         return value.upper()
 
@@ -64,6 +85,7 @@ class MovementSchema(BaseModel):
     observation: str | None = None
 
     @field_validator("movement_type", mode="before")
+    @classmethod
     def normalize_moviment_type(cls, value):
         return value.lower()
 

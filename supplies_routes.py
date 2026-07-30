@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependencies import verify_token, get_session
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from models import Product, User, StockMovement
 from schemas import SuppliesSchema, ProductAdjustmentSchema, ProductUpdateSchema, StockMovementSchema
 from typing import List
@@ -101,7 +102,7 @@ async def get_products(
 ):
     query = session.query(Product)
     if type:
-        query = query.filter(Product.product_type == type)
+        query = query.filter(func.lower(Product.product_type) == type.strip().lower())
     if active is not None:
         query = query.filter(Product.active == active)
     if search:
