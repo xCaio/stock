@@ -135,6 +135,8 @@ async def active_product(code:str, session:Session = Depends(get_session)):
 
 @supplies_router.post('/products/{code}/entry')
 async def entry_product(code: str, movement_schema: StockMovementSchema,session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    if user.role != "admin":
+        raise HTTPException(status_code=401, detail='Voce nao tem autorizacao para realizar essa operacao.')
     product = session.query(Product).filter(Product.code == code).first()
     if not product:
         raise HTTPException(status_code=404, detail='Produto nao encontrado')
@@ -160,6 +162,8 @@ async def entry_product(code: str, movement_schema: StockMovementSchema,session:
 
 @supplies_router.post('/products/{code}/exit')
 async def exit_product(code: str, movement_schema: StockMovementSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    if user.role != "admin":
+        raise HTTPException(status_code=401, detail='Voce nao tem autorizacao para realizar essa operacao.')
     product = session.query(Product).filter(Product.code == code).first()
     if not product:
         raise HTTPException(status_code=404, detail="Produto nao encontrado")
@@ -191,6 +195,8 @@ async def adjustment(
     session: Session = Depends(get_session),
     user: User = Depends(verify_token)
 ):
+    if user.role != "admin":
+        raise HTTPException(status_code=401, detail='Voce nao tem autorizacao para realizar essa operacao.')
     product = session.query(Product).filter(Product.id == id).first()
     if not product:
         raise HTTPException(404, "Produto nao encontrado")
