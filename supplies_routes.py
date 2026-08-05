@@ -4,16 +4,28 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from models import Product, User, StockMovement
 from schemas import SuppliesSchema, ProductAdjustmentSchema, ProductUpdateSchema, StockMovementSchema, StockMovementResponse
-from typing import List
-
+from io import BytesIO
+import pandas as pd
+from fastapi.responses import StreamingResponse
+from openpyxl import load_workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 
 supplies_router = APIRouter(prefix='/supplies', tags=['supplies'], dependencies=[Depends(verify_token)])
+
+# =========================
+# HEALTH / HOME
+# =========================
 
 @supplies_router.get('/')
 async def home():
     return {
         "message": "Rota inicial dos insumos"
     }
+
+# =========================
+# PRODUTOS - CONSULTAS
+# =========================
 
 @supplies_router.post('/products')
 async def create_product(supplies_schema: SuppliesSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
@@ -35,6 +47,129 @@ async def create_product(supplies_schema: SuppliesSchema, session: Session = Dep
         "product": new_product
     }
 
+def build_products_query(
+        session: Session,
+        type: str | None = None,
+        active: bool | None = None,
+        search: str | None = None
+):
+    query = session.query(Product)
+
+    if type:
+        query = query.filter(func.lower(Product.product_type) == type.strip().lower())
+    if active is not None:
+        query = query.filter(Product.active == active)
+    if search:
+        query = query.filter(Product.code.ilike(f"%{search.strip()}%"))
+    return query
+
+
+@supplies_router.get('/products')
+async def get_products(
+    type: str | None = None, 
+    active: bool | None = None, 
+    search: str | None = None, 
+    session: Session = Depends(get_session)
+):
+    query = build_products_query(
+        session,
+        type,
+        active,
+        search
+    )
+    return query.all()
+
+@supplies_router.get('/products/export')
+async def export_products(
+    type: str | None = None, 
+    active: bool | None = None, 
+    search: str | None = None, 
+    session: Session = Depends(get_session)
+):
+    products = build_products_query(
+        session,
+        type,
+        active,
+        search
+    ).all()
+
+    data = []
+    for product in products:
+        data.append({
+        "ID": product.id,
+        "Código": product.code,
+        "Tipo": product.product_type,
+        "Estoque": product.stock,
+        "Estoque mínimo": product.stock_minimum,
+        "Ativo": "Sim" if product.active else "Não",
+        "Situação Estoque": (
+            "Baixo estoque"
+            if product.stock <= product.stock_minimum
+            else "Normal"
+        ),  
+        "Criado em": product.created_at,
+        "Atualizado em": product.updated_at
+        })
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    df.to_excel(
+        output,
+        index=False,
+        engine="openpyxl"
+    )
+    output.seek(0)
+
+    workbook = load_workbook(output)
+    worksheet = workbook.active
+    for cell in worksheet[1]:
+        cell.font = Font(
+            bold=True
+        )
+        cell.alignment = Alignment(
+            horizontal="center"
+        )
+    for column in worksheet.columns:
+        max_length = 0
+
+        column_letter = get_column_letter(
+            column[0].column
+        )
+
+        for cell in column:
+            if cell.value:
+                max_length = max(
+                    max_length,
+                    len(str(cell.value))
+                )
+
+        worksheet.column_dimensions[column_letter].width = max_length + 3
+
+    worksheet.auto_filter.ref = worksheet.dimensions
+    worksheet.freeze_panes = "A2"
+    for row in worksheet.iter_rows(min_row=2):
+        estoque = row[3].value
+        minimo = row[4].value
+
+        if estoque <= minimo:
+            for cell in row:
+                cell.fill = PatternFill(
+                    "solid",
+                    fgColor="FFC7CE"
+                )
+    output = BytesIO()
+
+    workbook.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=produtos.xlsx"
+        }
+    )
+
 @supplies_router.get('/products/low-stock')
 async def low_stock(session: Session = Depends(get_session)):
     products = (
@@ -49,6 +184,11 @@ async def low_stock(session: Session = Depends(get_session)):
         "total": len(products),
         "products": products
     }
+
+
+# =========================
+# PRODUTO ESPECÍFICO
+# =========================
 
 @supplies_router.get('/products/{code}')
 async def search_product(code: str, session: Session = Depends(get_session)):
@@ -93,22 +233,6 @@ async def edit_product(code: str, product_update: ProductUpdateSchema ,session: 
         "product_type": product.product_type, 
     }
 
-@supplies_router.get('/products')
-async def get_products(
-    type: str | None = None, 
-    active: bool | None = None, 
-    search: str | None = None, 
-    session: Session = Depends(get_session)
-):
-    query = session.query(Product)
-    if type:
-        query = query.filter(func.lower(Product.product_type) == type.strip().lower())
-    if active is not None:
-        query = query.filter(Product.active == active)
-    if search:
-        query = query.filter(Product.code.ilike(f"%{search.strip()}%"))
-    return query.all()
-
 @supplies_router.patch('/products/{code}/inactive')
 async def inactive_product(code:str, session:Session = Depends(get_session)):
     product = session.query(Product).filter(Product.code == code).first()
@@ -132,6 +256,10 @@ async def active_product(code:str, session:Session = Depends(get_session)):
     return{
         "message": f"Produto {product.code} Ativado"
     }
+
+# =========================
+# MOVIMENTAÇÕES
+# =========================
 
 @supplies_router.post('/products/{code}/entry')
 async def entry_product(code: str, movement_schema: StockMovementSchema,session: Session = Depends(get_session), user: User = Depends(verify_token)):
@@ -188,7 +316,44 @@ async def exit_product(code: str, movement_schema: StockMovementSchema, session:
         "stock": product.stock
     }
 
-supplies_router.post('/products/{id}/adjustment')
+@supplies_router.get('/products/{code}/movements')
+async def product_movements(
+    code: str,
+    session: Session = Depends(get_session)
+):
+    product = (
+        session.query(Product)
+        .filter(Product.code == code)
+        .first()
+    )
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Produto nao encontrado"
+        )
+
+    movements = (
+        session.query(StockMovement)
+        .options(joinedload(StockMovement.user))
+        .filter(StockMovement.product_id == product.id)
+        .order_by(StockMovement.created_at.desc())
+        .all()
+    )
+
+    return {
+        "product": {
+            "code": product.code,
+            "current_stock": product.stock
+        },
+        "movements": [StockMovementResponse.from_movement(m) for m in movements]
+    }
+
+# =========================
+# AJUSTE
+# =========================
+
+@supplies_router.post('/products/{id}/adjustment')
 async def adjustment(
     id: int,
     product_adjustment: ProductAdjustmentSchema,
@@ -223,37 +388,4 @@ async def adjustment(
         "message": "Estoque ajustado com sucesso.",
         "difference": difference,
         "current_stock": product.stock
-    }
-
-@supplies_router.get('/products/{code}/movements')
-async def product_movements(
-    code: str,
-    session: Session = Depends(get_session)
-):
-    product = (
-        session.query(Product)
-        .filter(Product.code == code)
-        .first()
-    )
-
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Produto nao encontrado"
-        )
-
-    movements = (
-        session.query(StockMovement)
-        .options(joinedload(StockMovement.user))
-        .filter(StockMovement.product_id == product.id)
-        .order_by(StockMovement.created_at.desc())
-        .all()
-    )
-
-    return {
-        "product": {
-            "code": product.code,
-            "current_stock": product.stock
-        },
-        "movements": [StockMovementResponse.from_movement(m) for m in movements]
     }
