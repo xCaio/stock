@@ -1,200 +1,178 @@
 # Stock API
 
-## Visão geral
+API REST para controle de estoque de etiquetas e ribbons. O projeto oferece cadastro e consulta de produtos, movimentações auditáveis, autenticação JWT, administração de usuários, indicadores de estoque e exportação de produtos em Excel.
 
-A Stock API é uma aplicação backend em FastAPI para gestão de insumos e produtos com controle de estoque, histórico de movimentações, autenticação por JWT e administração de usuários.
+## Tecnologias
 
-O projeto foi estruturado para funcionar como uma base sólida para sistemas de controle de estoque com regras simples de acesso e operações registradas para auditoria.
+- Python 3
+- FastAPI e Uvicorn
+- SQLAlchemy 2 e PostgreSQL
+- Alembic para migrations
+- Pydantic 2 para validação de dados
+- JWT (`python-jose`) e hash de senhas com `passlib`/bcrypt
+- Pandas e OpenPyXL para exportação `.xlsx`
 
----
+## Arquitetura
 
-## Funcionalidades implementadas
+O código foi organizado por responsabilidade, separando configuração, persistência, contratos HTTP e endpoints:
 
-### Autenticação e segurança
-- Registro de usuários
-- Login com e-mail e senha
-- Login compatível com OAuth2 form data
-- Emissão de access token e refresh token
-- Proteção de rotas com autenticação JWT
-- Controle de permissões por role (user/admin)
-
-### Gestão de produtos e estoque
-- Cadastro de produtos com código único
-- Listagem de produtos com filtros por tipo, status ativo/inativo e busca por código
-- Busca de produto por código
-- Edição de dados do produto
-- Ativação e inativação de produtos sem exclusão física
-- Consulta de produtos com estoque baixo
-- Registro de entradas e saídas de estoque
-- Ajuste manual de inventário
-- Histórico de movimentações por produto
-
-### Dashboard e auditoria
-- Endpoint de dashboard com métricas gerais
-- Contagem de entradas e saídas do dia
-- Identificação de produtos sem estoque
-- Listagem de produtos com estoque abaixo do mínimo
-- Últimas movimentações registradas
-
-### Administração de usuários
-- Listagem de usuários (apenas admin)
-- Consulta de usuário por ID (apenas admin)
-- Atualização de dados de usuário (apenas admin)
-- Alteração de role entre user e admin
-
----
-
-## Stack tecnológica
-
-- Python
-- FastAPI
-- SQLAlchemy
-- Pydantic
-- Alembic
-- PostgreSQL
-- JWT (python-jose)
-- bcrypt/passlib
-- Uvicorn
-- python-dotenv
-
----
-
-## Estrutura do projeto
-
-- [main.py](main.py) – ponto de entrada da aplicação e inclusão dos routers
-- [auth_routes.py](auth_routes.py) – rotas de autenticação e token
-- [supplies_routes.py](supplies_routes.py) – gestão de produtos, estoque e movimentações
-- [movements_routes.py](movements_routes.py) – histórico de movimentações
-- [dashboard_routes.py](dashboard_routes.py) – métricas e resumo do estoque
-- [users_routes.py](users_routes.py) – administração de usuários
-- [models.py](models.py) – modelos SQLAlchemy
-- [schemas.py](schemas.py) – validação de entrada e saída
-- [database.py](database.py) – configuração do banco
-- [dependencies.py](dependencies.py) – dependências de sessão e autenticação
-- [security.py](security.py) – configuração de segurança e hashing
-- [alembic/](alembic) – migrações do banco
-- [docs/](docs) – documentação do projeto
-
----
-
-## Principais modelos
-
-### User
-Representa um usuário do sistema com:
-- id
-- name
-- email
-- password (armazenada de forma criptografada)
-- role
-
-### Product
-Representa um produto ou insumo com:
-- id
-- code
-- product_type
-- stock
-- stock_minimum
-- active
-- created_at
-- updated_at
-
-### StockMovement
-Representa uma movimentação de estoque com:
-- product_id
-- user_id
-- movement_type
-- quantity
-- stock_before
-- stock_after
-- observation
-- created_at
-
----
-
-## Endpoints principais
-
-### Autenticação
-- POST /auth/register
-- POST /auth/login
-- POST /auth/login-form
-- GET /auth/refresh
-
-### Produtos e estoque
-- GET /supplies/
-- POST /supplies/products
-- GET /supplies/products
-- GET /supplies/products/{code}
-- PUT /supplies/products/{code}
-- PATCH /supplies/products/{code}/inactive
-- PATCH /supplies/products/{code}/active
-- GET /supplies/products/low-stock
-- POST /supplies/products/{code}/entry
-- POST /supplies/products/{code}/exit
-- POST /supplies/products/{id}/adjustment
-- GET /supplies/products/{code}/movements
-
-### Movimentações
-- GET /movements
-
-### Dashboard
-- GET /dashboard
-
-### Usuários
-- GET /users
-- GET /users/{id}
-- PUT /users/{id}
-- PATCH /users/{id}/role
-
----
-
-## Variáveis de ambiente
-
-Configure as seguintes variáveis antes de executar a aplicação:
-
-```env
-DATABASE_URL=postgresql://usuario:senha@localhost:5432/stock
-SECRET_KEY=sua-chave-secreta
-ALGORITHM=HS256
-TOKEN_ACESS_EXPIRES_MINUTES=30
+```text
+app/
+├── core/
+│   ├── database.py       # engine SQLAlchemy e Base dos modelos
+│   └── security.py       # JWT, OAuth2 e contexto bcrypt
+├── dependencies/
+│   └── auth.py           # sessão do banco e validação do token
+├── enums/
+│   └── types.py          # tipos de movimentação
+├── models/
+│   ├── user.py
+│   ├── product.py
+│   └── stock_movement.py # entidades SQLAlchemy
+├── routers/
+│   ├── auth.py
+│   ├── supplies.py
+│   ├── movements.py
+│   ├── dashboard.py
+│   └── users.py          # módulos HTTP da API
+├── schemas/
+│   ├── auth.py
+│   ├── product.py
+│   ├── stock_movement.py
+│   └── user.py           # validação e serialização Pydantic
+└── main.py               # aplicação FastAPI, routers e CORS
+alembic/                  # configuração e histórico de migrations
+docs/                     # documentação complementar
 ```
 
----
+`app/main.py` compõe a aplicação e registra os routers. Os routers usam as dependências para obter uma sessão do banco e o usuário autenticado; os modelos representam as tabelas e os schemas validam os dados recebidos e formatam as respostas.
 
-## Como executar
+## Recursos disponíveis
 
-### 1. Criar ambiente virtual
+- Registro, login por JSON ou formulário OAuth2 e renovação de token.
+- Produtos com código único, tipo `etiqueta` ou `ribbon`, estoque mínimo e ativação/inativação.
+- Filtros por tipo, status e código; alerta de baixo estoque.
+- Exportação da listagem filtrada em Excel, com filtros, cabeçalho fixado e destaque para estoque baixo.
+- Entradas e saídas com registro de produto, usuário, quantidade, saldo anterior/posterior, observação e data.
+- Histórico global de movimentações com filtros e histórico por produto.
+- Dashboard com indicadores de estoque e últimas movimentações.
+- Administração de usuários e papéis `user` e `admin`.
 
-```bash
-python -m venv venv
+## Autenticação e permissões
+
+Envie o token de acesso nas rotas protegidas:
+
+```http
+Authorization: Bearer <access_token>
 ```
 
-### 2. Instalar dependências
+Os módulos `/supplies`, `/movements` e `/users` exigem autenticação. Cadastro de produto, entrada, saída e ajuste de estoque exigem adicionalmente o papel `admin`; a administração de usuários também é exclusiva de administradores. As rotas de autenticação e dashboard estão disponíveis sem token na implementação atual.
 
-```bash
-pip install -r requirements.txt
+## Endpoints
+
+| Módulo | Método | Rota | Descrição |
+| --- | --- | --- | --- |
+| Autenticação | `GET` | `/auth/` | Verifica o módulo de autenticação |
+|  | `POST` | `/auth/register` | Cria uma conta |
+|  | `POST` | `/auth/login` | Login com corpo JSON; retorna access e refresh token |
+|  | `POST` | `/auth/login-form` | Login compatível com OAuth2 form data |
+|  | `GET` | `/auth/refresh` | Gera novo access token |
+|  | `GET` | `/auth/me` | Retorna o usuário do token |
+| Produtos | `GET` | `/supplies/` | Verifica o módulo de insumos |
+|  | `POST` | `/supplies/products` | Cria produto (admin) |
+|  | `GET` | `/supplies/products` | Lista produtos e aceita `type`, `active` e `search` |
+|  | `GET` | `/supplies/products/export` | Exporta a listagem filtrada em Excel |
+|  | `GET` | `/supplies/products/low-stock` | Lista itens com `stock <= stock_minimum` |
+|  | `GET` | `/supplies/products/{code}` | Busca produto pelo código |
+|  | `PUT` | `/supplies/products/{code}` | Atualiza código e tipo |
+|  | `PATCH` | `/supplies/products/{code}/active` | Ativa produto |
+|  | `PATCH` | `/supplies/products/{code}/inactive` | Inativa produto |
+|  | `POST` | `/supplies/products/{code}/entry` | Registra entrada (admin) |
+|  | `POST` | `/supplies/products/{code}/exit` | Registra saída (admin) |
+|  | `GET` | `/supplies/products/{code}/movements` | Histórico de um produto |
+|  | `POST` | `/supplies/products/{id}/adjustment` | Ajuste de inventário (admin) |
+| Movimentações | `GET` | `/movements/` | Lista e filtra movimentações |
+| Dashboard | `GET` | `/dashboard/` | Retorna indicadores do estoque |
+| Usuários | `GET` | `/users/` | Lista usuários (admin) |
+|  | `GET` | `/users/{id}` | Busca usuário (admin) |
+|  | `PUT` | `/users/{id}` | Atualiza usuário (admin) |
+|  | `PATCH` | `/users/{id}/role` | Altera papel (admin) |
+
+### Filtros de produtos e movimentações
+
+```http
+GET /supplies/products?type=etiqueta&active=true&search=PA
+GET /movements/?product_code=PA123&user_id=1&movement_type=entrada&start=2026-08-01&end=2026-08-31
 ```
 
-### 3. Aplicar migrações
+Os tipos de produto aceitos são `etiqueta` e `ribbon`; as formas plurais também são normalizadas na criação e edição. Os tipos de movimentação são `entrada`, `saida` e `ajuste`.
 
-```bash
-alembic upgrade head
+## Exemplos de requisição
+
+Criar produto:
+
+```json
+{
+  "code": "PA12345",
+  "product_type": "etiqueta",
+  "stock": 20,
+  "stock_minimum": 5
+}
 ```
 
-### 4. Subir a aplicação
+Registrar entrada ou saída:
 
-```bash
-uvicorn main:app --reload
+```json
+{
+  "quantity": 10,
+  "observation": "Recebimento do fornecedor"
+}
 ```
 
-A API ficará disponível em:
-- http://127.0.0.1:8000
+## Configuração local
 
-Documentação interativa:
-- http://127.0.0.1:8000/docs
-- http://127.0.0.1:8000/redoc
+1. Crie e ative um ambiente virtual:
 
----
+   ```bash
+   python -m venv venv
+   # Windows PowerShell
+   .\venv\Scripts\Activate.ps1
+   ```
 
-## Observações finais
+2. Instale as dependências:
 
-Este projeto já contempla os principais blocos de uma API de estoque funcional: autenticação, gestão de produtos, entradas e saídas, histórico de movimentos, dashboard e controle administrativo. A estrutura está preparada para evolução com novas regras de negócio e funcionalidades adicionais.
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Copie `.env.example` para `.env` e preencha as variáveis:
+
+   ```env
+   DATABASE_URL=postgresql://postgres:sua_senha@localhost:5432/stock
+   SECRET_KEY=uma_chave_secreta_forte
+   ALGORITHM=HS256
+   TOKEN_ACESS_EXPIRES_MINUTES=30
+   ```
+
+   > O nome `TOKEN_ACESS_EXPIRES_MINUTES` é mantido assim por compatibilidade com o código atual.
+
+4. Aplique as migrations:
+
+   ```bash
+   alembic upgrade head
+   ```
+
+5. Inicie o servidor:
+
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+A API estará disponível em `http://127.0.0.1:8000`, com documentação interativa em:
+
+- `http://127.0.0.1:8000/docs`
+- `http://127.0.0.1:8000/redoc`
+
+## Observação de manutenção
+
+O endpoint de ajuste de inventário está exposto, mas sua implementação ainda precisa ser alinhada aos campos obrigatórios atuais de `StockMovement` (`movement_type`, `stock_before`, `stock_after` e `observation`). Os fluxos de entrada e saída já registram esses dados corretamente.
