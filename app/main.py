@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from supplies_routes import supplies_router
-from auth_routes import auth_router
-from movements_routes import movements_router
-from dashboard_routes import dashboard_router
-from users_routes import users_router
+from app.routers.supplies import router as supplies_router
+from app.routers.auth import router as auth_router
+from app.routers.movements import router as movements_router
+from app.routers.dashboard import router as dashboard_router
+from app.routers.users import router as users_router
 
 app = FastAPI()
 
@@ -18,8 +18,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "https://stock-frontend-dun-eight.vercel.app",
+        "https://workflow.cabtec.com.br",
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

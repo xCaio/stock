@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from models import StockMovement, User, Product
-from dependencies import verify_token, get_session
-from schemas import StockMovementResponse
+from app.models import StockMovement, User, Product
+from app.dependencies.auth import verify_token, get_session
+from app.schemas import StockMovementResponse
 from datetime import date, datetime, time
 
-movements_router = APIRouter(prefix='/movements', tags=['movements'], dependencies=[Depends(verify_token)])
+router = APIRouter(prefix='/movements', tags=['movements'], dependencies=[Depends(verify_token)])
 
-@movements_router.get('/', response_model=list[StockMovementResponse])
+@router.get('/', response_model=list[StockMovementResponse])
 async def list_all(
     product_code: str | None = None,
     user_id: int | None = None,

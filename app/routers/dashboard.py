@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from dependencies import get_session
-from models import Product, StockMovement
+from app.dependencies.auth import get_session
+from app.models import Product, StockMovement
 from datetime import datetime, timedelta
 
 today = datetime.now().date()
 start = datetime.combine(today, datetime.min.time())
 end = start + timedelta(days=1)
 
-dashboard_router = APIRouter(prefix='/dashboard', tags=['dashboard'])
+router = APIRouter(prefix='/dashboard', tags=['dashboard'])
 
-@dashboard_router.get('/')
+@router.get('/')
 async def dashboard(session: Session = Depends(get_session)):
     total_products = session.query(func.sum(Product.stock)).scalar()
     entryies_today = session.query(StockMovement).filter(

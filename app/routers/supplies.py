@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-from dependencies import verify_token, get_session
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-from models import Product, User, StockMovement
-from schemas import SuppliesSchema, ProductAdjustmentSchema, ProductUpdateSchema, StockMovementSchema, StockMovementResponse
+from app.dependencies.auth import verify_token, get_session
+from app.models import Product, User, StockMovement
+from app.schemas import SuppliesSchema, ProductAdjustmentSchema, ProductUpdateSchema, StockMovementSchema, StockMovementResponse
 from io import BytesIO
 import pandas as pd
 from fastapi.responses import StreamingResponse
@@ -11,13 +11,13 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 
-supplies_router = APIRouter(prefix='/supplies', tags=['supplies'], dependencies=[Depends(verify_token)])
+router = APIRouter(prefix='/supplies', tags=['supplies'], dependencies=[Depends(verify_token)])
 
 # =========================
 # HEALTH / HOME
 # =========================
 
-@supplies_router.get('/')
+@router.get('/')
 async def home():
     return {
         "message": "Rota inicial dos insumos"
@@ -27,7 +27,7 @@ async def home():
 # PRODUTOS - CONSULTAS
 # =========================
 
-@supplies_router.post('/products')
+@router.post('/products')
 async def create_product(supplies_schema: SuppliesSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
 
     """
@@ -64,7 +64,7 @@ def build_products_query(
     return query
 
 
-@supplies_router.get('/products')
+@router.get('/products')
 async def get_products(
     type: str | None = None, 
     active: bool | None = None, 
@@ -79,7 +79,7 @@ async def get_products(
     )
     return query.all()
 
-@supplies_router.get('/products/export')
+@router.get('/products/export')
 async def export_products(
     type: str | None = None, 
     active: bool | None = None, 
@@ -170,7 +170,7 @@ async def export_products(
         }
     )
 
-@supplies_router.get('/products/low-stock')
+@router.get('/products/low-stock')
 async def low_stock(session: Session = Depends(get_session)):
     products = (
         session.query(Product).filter(Product.stock <= Product.stock_minimum).all()
@@ -190,7 +190,7 @@ async def low_stock(session: Session = Depends(get_session)):
 # PRODUTO ESPECÍFICO
 # =========================
 
-@supplies_router.get('/products/{code}')
+@router.get('/products/{code}')
 async def search_product(code: str, session: Session = Depends(get_session)):
     """
         ## Buscar um produto
@@ -203,7 +203,7 @@ async def search_product(code: str, session: Session = Depends(get_session)):
         "product": product
     }
 
-@supplies_router.put('/products/{code}')
+@router.put('/products/{code}')
 async def edit_product(code: str, product_update: ProductUpdateSchema ,session: Session = Depends(get_session)):
     """
         ## Editar um produto
@@ -233,7 +233,7 @@ async def edit_product(code: str, product_update: ProductUpdateSchema ,session: 
         "product_type": product.product_type, 
     }
 
-@supplies_router.patch('/products/{code}/inactive')
+@router.patch('/products/{code}/inactive')
 async def inactive_product(code:str, session:Session = Depends(get_session)):
     product = session.query(Product).filter(Product.code == code).first()
     if not product:
@@ -245,7 +245,7 @@ async def inactive_product(code:str, session:Session = Depends(get_session)):
         "message": f"Produto {product.code} Desativado"
     }
 
-@supplies_router.patch('/products/{code}/active')
+@router.patch('/products/{code}/active')
 async def active_product(code:str, session:Session = Depends(get_session)):
     product = session.query(Product).filter(Product.code == code).first()
     if not product:
@@ -261,7 +261,7 @@ async def active_product(code:str, session:Session = Depends(get_session)):
 # MOVIMENTAÇÕES
 # =========================
 
-@supplies_router.post('/products/{code}/entry')
+@router.post('/products/{code}/entry')
 async def entry_product(code: str, movement_schema: StockMovementSchema,session: Session = Depends(get_session), user: User = Depends(verify_token)):
     if user.role != "admin":
         raise HTTPException(status_code=401, detail='Voce nao tem autorizacao para realizar essa operacao.')
@@ -288,7 +288,7 @@ async def entry_product(code: str, movement_schema: StockMovementSchema,session:
         "stock": product.stock
     }
 
-@supplies_router.post('/products/{code}/exit')
+@router.post('/products/{code}/exit')
 async def exit_product(code: str, movement_schema: StockMovementSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
     if user.role != "admin":
         raise HTTPException(status_code=401, detail='Voce nao tem autorizacao para realizar essa operacao.')
@@ -316,7 +316,7 @@ async def exit_product(code: str, movement_schema: StockMovementSchema, session:
         "stock": product.stock
     }
 
-@supplies_router.get('/products/{code}/movements')
+@router.get('/products/{code}/movements')
 async def product_movements(
     code: str,
     session: Session = Depends(get_session)
@@ -353,7 +353,7 @@ async def product_movements(
 # AJUSTE
 # =========================
 
-@supplies_router.post('/products/{id}/adjustment')
+@router.post('/products/{id}/adjustment')
 async def adjustment(
     id: int,
     product_adjustment: ProductAdjustmentSchema,

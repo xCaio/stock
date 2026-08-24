@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from dependencies import get_session, verify_token
-from models import User
-from security import bcrypt_context, TOKEN_ACESS_EXPIRES_MINUTES, SECRET_KEY, ALGORITHM
-from schemas import CreateAccountSchema, LoginSchema
+from app.dependencies.auth import get_session, verify_token
+from app.models import User
+from app.schemas import CreateAccountSchema, LoginSchema
+from app.core.security import bcrypt_context, TOKEN_ACESS_EXPIRES_MINUTES, SECRET_KEY, ALGORITHM
 from datetime import timezone, timedelta, datetime
 from jose import jwt
 
-auth_router = APIRouter(prefix='/auth', tags=['auth'])
+router = APIRouter(prefix='/auth', tags=['auth'])
 
 def authenticate_user(email,password,session):
     user = session.query(User).filter(User.email == email).first()
@@ -25,13 +25,13 @@ def create_access_token(id_user, duration= timedelta(minutes=TOKEN_ACESS_EXPIRES
     encode = jwt.encode(dict_info, SECRET_KEY, ALGORITHM)
     return encode
     
-@auth_router.get('/')
+@router.get('/')
 async def home():
     return{
         "message": "Rota de autenticação"
     }
 
-@auth_router.post('/register')
+@router.post('/register')
 async def register(create_account: CreateAccountSchema, session: Session = Depends(get_session)):
     user = session.query(User).filter(User.email == create_account.email).first()
     if user:
@@ -44,7 +44,7 @@ async def register(create_account: CreateAccountSchema, session: Session = Depen
         "message": f"Usuario criado {create_account.email}"
     }
 
-@auth_router.post('/login')
+@router.post('/login')
 async def login(login_schema: LoginSchema, session: Session = Depends(get_session)):
     user = authenticate_user(login_schema.email, login_schema.password, session)
     if not user:
@@ -57,7 +57,7 @@ async def login(login_schema: LoginSchema, session: Session = Depends(get_sessio
         "token_type":"Bearer"
     }
 
-@auth_router.post('/login-form')
+@router.post('/login-form')
 async def login(login_form: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
     user = authenticate_user(login_form.username, login_form.password, session)
     if not user:
@@ -68,7 +68,7 @@ async def login(login_form: OAuth2PasswordRequestForm = Depends(), session: Sess
         "token_type":"Bearer"
     }
 
-@auth_router.get('/refresh')
+@router.get('/refresh')
 async def refresh_token(user: User = Depends(verify_token)):
     access_token = create_access_token(user.id)
 
@@ -77,7 +77,7 @@ async def refresh_token(user: User = Depends(verify_token)):
         "token_type": "Bearer"
     }
 
-@auth_router.get('/me')
+@router.get('/me')
 async def me(user: User = Depends(verify_token)):
     return {
         "id": user.id,
